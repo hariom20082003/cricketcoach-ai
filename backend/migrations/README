@@ -1,0 +1,14 @@
+CricketCoach AI database migrations
+
+Alembic is the schema source of truth. Run commands from the backend directory:
+
+    python -m alembic upgrade head
+    python -m alembic current
+    python -m alembic check
+
+The initial migration creates the full application schema and enables PostgreSQL
+row-level security on the public application tables. It creates no Data API
+grants or policies. Future schema changes should be committed as new Alembic
+revisions. Do not use SQLAlchemy metadata.create_all() to initialize a hosted
+database. Analysis progress is derived from persisted jobs and drill completions;
+there is no dedicated progress table.

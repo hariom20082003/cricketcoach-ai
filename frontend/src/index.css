@@ -1,0 +1,85 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    box-sizing: border-box;
+  }
+
+  body {
+    @apply bg-cricket-charcoal text-white font-sans antialiased;
+    min-height: 100vh;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-cricket-navy;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-cricket-surface-light rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-cricket-green;
+  }
+}
+
+@layer components {
+  .card {
+    @apply bg-cricket-surface rounded-xl border border-white/5 p-6;
+  }
+
+  .card-hover {
+    @apply card hover:border-cricket-green/30 transition-all duration-200 cursor-pointer;
+  }
+
+  .btn-primary {
+    @apply bg-cricket-green hover:bg-cricket-green-dark text-white font-semibold px-4 py-2 rounded-lg transition-all duration-150 disabled:opacity-50 disabled:cursor-not-allowed;
+  }
+
+  .btn-secondary {
+    @apply bg-cricket-surface-light hover:bg-cricket-surface border border-white/10 text-white font-medium px-4 py-2 rounded-lg transition-all duration-150;
+  }
+
+  .btn-danger {
+    @apply bg-red-600/20 hover:bg-red-600/40 text-red-400 border border-red-600/30 font-medium px-4 py-2 rounded-lg transition-all duration-150;
+  }
+
+  .input {
+    @apply bg-cricket-navy border border-white/10 rounded-lg px-4 py-2.5 text-white placeholder-white/30 focus:outline-none focus:ring-2 focus:ring-cricket-green/50 focus:border-cricket-green/50 transition-all w-full;
+  }
+
+  .label {
+    @apply block text-sm font-medium text-white/70 mb-1.5;
+  }
+
+  .badge-green {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-cricket-green/20 text-cricket-green-light;
+  }
+
+  .badge-yellow {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-amber-500/20 text-amber-400;
+  }
+
+  .badge-red {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-red-500/20 text-red-400;
+  }
+
+  .badge-blue {
+    @apply inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-blue-500/20 text-blue-400;
+  }
+
+  .section-title {
+    @apply text-2xl font-bold text-white;
+  }
+
+  .section-subtitle {
+    @apply text-white/60 mt-1;
+  }
+}

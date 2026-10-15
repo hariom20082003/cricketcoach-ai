@@ -1,0 +1,47 @@
+services:
+  - type: web
+    name: cricketcoach-api
+    runtime: python
+    rootDir: backend
+    buildCommand: python -m pip install --no-cache-dir -r requirements-render.txt
+    # Apply committed Alembic migrations before serving requests. This is idempotent
+    # for a single Render service/instance; keep worker count at one for this demo.
+    startCommand: alembic upgrade head && python -m uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers 1
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: SECRET_KEY
+        generateValue: true
+      - key: DATABASE_URL
+        sync: false
+      - key: DB_POOL_SIZE
+        value: "2"
+      - key: DB_MAX_OVERFLOW
+        value: "0"
+      - key: DB_POOL_RECYCLE_SECONDS
+        value: "1800"
+      - key: CORS_ORIGINS
+        sync: false
+      - key: VIDEO_STORAGE_BACKEND
+        value: s3
+      - key: SUPABASE_S3_ENDPOINT
+        sync: false
+      - key: SUPABASE_S3_REGION
+        sync: false
+      - key: SUPABASE_S3_BUCKET
+        sync: false
+      - key: SUPABASE_S3_ACCESS_KEY_ID
+        sync: false
+      - key: SUPABASE_S3_SECRET_ACCESS_KEY
+        sync: false
+      - key: MODEL_ARTIFACT_PREFIX
+        value: models
+      - key: VISUAL_MODEL_DIR
+        value: /tmp/cricketcoach-model
+      - key: CRICKETCOACH_DEVICE
+        value: cpu
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "720"
+      - key: MAX_VIDEO_SIZE_MB
+        value: "100"
