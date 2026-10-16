@@ -43,7 +43,7 @@ services:
       - key: CRICKETCOACH_DEVICE
         value: cpu
       - key: ALLOW_MODEL_UNAVAILABLE_PREVIEW
-        value: "false"
+        value: "true"
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "720"
       - key: MAX_VIDEO_SIZE_MB

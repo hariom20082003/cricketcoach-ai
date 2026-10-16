@@ -63,7 +63,7 @@ Set these backend environment variables in Render. `render.yaml` generates `SECR
 | `MODEL_ARTIFACT_PREFIX` | `models` |
 | `VISUAL_MODEL_DIR` | `/tmp/cricketcoach-model` |
 | `CRICKETCOACH_DEVICE` | `cpu` |
-| `ALLOW_MODEL_UNAVAILABLE_PREVIEW` | `false` by default; set `true` only for the explicitly limited non-ML preview. |
+| `ALLOW_MODEL_UNAVAILABLE_PREVIEW` | `true` in this demo Blueprint for the explicitly limited non-ML preview; set `false` only after approved model artifacts are available and inference capacity is provisioned. |
 | `ACCESS_TOKEN_EXPIRE_MINUTES` | `720` |
 | `MAX_VIDEO_SIZE_MB` | `100` |
 
@@ -110,7 +110,7 @@ After configuring services and permitting the model artifact, test manually:
 4. Restart/redeploy Render. Confirm login and completed history remain, and the private video streams through the API. An in-progress job may be marked failed after restart.
 5. Check browser CORS/network errors and Render logs. Local checks do not count as hosted verification.
 
-The existing Supabase database and private bucket were configured separately and the live Alembic revision is `f6a1c3d9e742`. No Render service or GitHub Pages deployment has been created or tested, and no Render-to-Supabase connection or hosted inference has been verified.
+The existing Supabase database and private bucket were configured separately and the live Alembic revision is `f6a1c3d9e742`. GitHub Pages is enabled, but its deployment requires the `VITE_API_URL` Actions variable. A Render service still needs to be created and configured; no Render-to-Supabase connection or hosted inference has been verified.
 
 ## Local checks
 

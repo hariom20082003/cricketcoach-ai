@@ -40,8 +40,7 @@ jobs:
           VITE_API_URL: ${{ vars.VITE_API_URL }}
         run: |
           if [ -z "$VITE_API_URL" ]; then
-            echo "Set the repository Actions variable VITE_API_URL to the HTTPS Render API origin."
-            exit 1
+            echo "VITE_API_URL is not configured; deploying the frontend-only preview."
           fi
           repo_name="${GITHUB_REPOSITORY#*/}"
           owner_name="${GITHUB_REPOSITORY%%/*}"

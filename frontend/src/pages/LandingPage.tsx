@@ -25,16 +25,28 @@ const features = [
 ]
 
 export default function LandingPage() {
+  const backendConfigured = Boolean(import.meta.env.VITE_API_URL?.trim())
+
   return (
     <div className="min-h-screen bg-cricket-charcoal text-white">
+      {!backendConfigured && (
+        <div role="status" className="bg-amber-400 px-6 py-3 text-center text-sm font-medium text-cricket-charcoal">
+          Frontend preview only — account, upload, and analysis features will be available after the backend is deployed.
+        </div>
+      )}
+
       {/* Navbar */}
       <nav className="flex items-center justify-between px-8 py-5 border-b border-white/5">
         <div className="flex items-center gap-2 font-bold text-lg">
           <span>🏏</span> CricketCoach <span className="text-cricket-green">AI</span>
         </div>
         <div className="flex gap-3">
-          <Link to="/login" className="btn-secondary text-sm px-5 py-2">Sign In</Link>
-          <Link to="/register" className="btn-primary text-sm px-5 py-2">Get Started</Link>
+          {backendConfigured && (
+            <>
+              <Link to="/login" className="btn-secondary text-sm px-5 py-2">Sign In</Link>
+              <Link to="/register" className="btn-primary text-sm px-5 py-2">Get Started</Link>
+            </>
+          )}
         </div>
       </nav>
 
@@ -51,17 +63,25 @@ export default function LandingPage() {
           Upload a batting video, identify the shot, inspect pose landmarks, and receive
           automated pose measurements and rule-based suggestions. These observations can help you review a clip, but are not expert-validated coaching advice.
         </p>
-        <div className="flex flex-col sm:flex-row gap-4 justify-center">
-          <Link to="/register" className="btn-primary text-base px-8 py-3 flex items-center gap-2 justify-center">
-            Get Started Free <ArrowRight size={18} />
-          </Link>
-          <Link to="/login" className="btn-secondary text-base px-8 py-3">
-            Sign In
-          </Link>
-        </div>
-        <p className="text-white/30 text-sm mt-6">
-          Ten shot classes · visual-temporal model · uncalibrated class scores.
-        </p>
+        {backendConfigured ? (
+          <>
+            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+              <Link to="/register" className="btn-primary text-base px-8 py-3 flex items-center gap-2 justify-center">
+                Get Started Free <ArrowRight size={18} />
+              </Link>
+              <Link to="/login" className="btn-secondary text-base px-8 py-3">
+                Sign In
+              </Link>
+            </div>
+            <p className="text-white/30 text-sm mt-6">
+              Ten shot classes · visual-temporal model · uncalibrated class scores.
+            </p>
+          </>
+        ) : (
+          <p className="text-amber-200/80 text-sm mt-6">
+            The interactive coaching app is not connected yet.
+          </p>
+        )}
       </section>
 
       {/* Honest disclaimer */}
@@ -96,10 +116,16 @@ export default function LandingPage() {
       {/* CTA */}
       <section className="text-center px-6 py-20">
         <h2 className="text-3xl font-bold mb-4">Ready to improve your batting?</h2>
-        <p className="text-white/50 mb-8">Create a free account and upload your first video in minutes.</p>
-        <Link to="/register" className="btn-primary text-base px-10 py-3 inline-flex items-center gap-2">
-          Start Analysing <ArrowRight size={18} />
-        </Link>
+        {backendConfigured ? (
+          <>
+            <p className="text-white/50 mb-8">Create a free account and upload your first video in minutes.</p>
+            <Link to="/register" className="btn-primary text-base px-10 py-3 inline-flex items-center gap-2">
+              Start Analysing <ArrowRight size={18} />
+            </Link>
+          </>
+        ) : (
+          <p className="text-amber-200/80">Interactive coaching will be available after the backend is deployed.</p>
+        )}
       </section>
 
       {/* Footer */}
