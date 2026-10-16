@@ -26,6 +26,24 @@ def test_valid_hosted_configuration_is_accepted():
     hosted_settings().validate_production()
 
 
+def test_missing_model_is_strict_in_production_unless_preview_is_enabled():
+    strict = hosted_settings()
+    assert strict.ALLOW_MODEL_UNAVAILABLE_PREVIEW is False
+    with pytest.raises(RuntimeError, match="refusing an unhealthy production start"):
+        strict.validate_model_startup(model_available=False)
+
+    preview = hosted_settings(ALLOW_MODEL_UNAVAILABLE_PREVIEW=True)
+    preview.validate_model_startup(model_available=False)
+
+
+def test_loaded_model_and_nonproduction_startup_do_not_require_preview_flag():
+    strict = hosted_settings()
+    strict.validate_model_startup(model_available=True)
+
+    development = Settings(APP_ENV="development")
+    development.validate_model_startup(model_available=False)
+
+
 @pytest.mark.parametrize(
     "overrides, message",
     [

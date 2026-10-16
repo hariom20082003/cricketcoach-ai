@@ -9,6 +9,20 @@ from sqlalchemy.orm import configure_mappers
 from app.models import Base
 
 
+def application_table_names(table_names):
+    """Drop Alembic's bookkeeping table without masking other extra tables."""
+    return set(table_names) - {"alembic_version"}
+
+
+def test_schema_verifier_excludes_only_alembic_bookkeeping_table():
+    expected = {"users", "analysis_jobs"}
+
+    assert application_table_names(expected | {"alembic_version"}) == expected
+    assert application_table_names(
+        expected | {"alembic_version", "unexpected_table"}
+    ) == expected | {"unexpected_table"}
+
+
 def test_orm_relationships_and_owner_integrity_constraints_are_configured():
     configure_mappers()
     tables = Base.metadata.tables
@@ -34,6 +48,13 @@ def test_orm_relationships_and_owner_integrity_constraints_are_configured():
 def test_fresh_database_migrates_and_matches_orm_metadata(tmp_path):
     backend_dir = Path(__file__).resolve().parents[1]
     database_path = tmp_path / "fresh-schema.sqlite3"
+    alembic_config = tmp_path / "alembic.ini"
+    config_text = (backend_dir / "alembic.ini").read_text(encoding="utf-8")
+    config_text = config_text.replace(
+        "script_location = migrations",
+        f"script_location = {backend_dir / 'migrations'}",
+    )
+    alembic_config.write_text(config_text, encoding="utf-8")
     env = os.environ.copy()
     env.update({
         "APP_ENV": "development",
@@ -43,8 +64,8 @@ def test_fresh_database_migrates_and_matches_orm_metadata(tmp_path):
 
     def run_alembic(*arguments):
         return subprocess.run(
-            [sys.executable, "-m", "alembic", *arguments],
-            cwd=backend_dir,
+            [sys.executable, "-m", "alembic", "-c", str(alembic_config), *arguments],
+            cwd=tmp_path,
             env=env,
             text=True,
             capture_output=True,
@@ -58,7 +79,7 @@ def test_fresh_database_migrates_and_matches_orm_metadata(tmp_path):
 
     engine = create_engine(f"sqlite:///{database_path}")
     try:
-        migrated = set(inspect(engine).get_table_names()) - {"alembic_version"}
+        migrated = application_table_names(inspect(engine).get_table_names())
         assert migrated == set(Base.metadata.tables)
     finally:
         engine.dispose()

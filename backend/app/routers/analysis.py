@@ -7,6 +7,7 @@ from app.models import User, Video, AnalysisJob, AnalysisStatus
 from app.schemas import AnalysisJobOut, AnalysisResultOut, ShotPredictionOut, PoseResultOut, TechniqueObservationOut, VideoOut
 from app.services.auth import get_current_user
 from app.workers.analysis_worker import start_analysis_background
+from app.ml.visual_classifier import get_visual_classifier
 
 router = APIRouter(prefix="/api/analysis", tags=["analysis"])
 
@@ -22,6 +23,15 @@ def start_analysis(
     ).first()
     if not video:
         raise HTTPException(status_code=404, detail="Video not found")
+
+    if not get_visual_classifier().is_available:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail=(
+                "Cricket-shot analysis is unavailable because the visual classifier is not loaded. "
+                "No analysis job was created."
+            ),
+        )
 
     # Check no active job already running for this video
     existing = db.query(AnalysisJob).filter(

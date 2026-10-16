@@ -24,6 +24,7 @@ class Settings(BaseSettings):
     MODEL_ARTIFACT_PREFIX: str = "models"
     VISUAL_MODEL_DIR: Optional[str] = None
     CRICKETCOACH_DEVICE: str = "auto"
+    ALLOW_MODEL_UNAVAILABLE_PREVIEW: bool = False
     MAX_VIDEO_SIZE_MB: int = 100
     ALLOWED_VIDEO_EXTENSIONS: str = "mp4,mov,avi,webm"
     CORS_ORIGINS: str = "http://localhost:5173,http://localhost:3000"
@@ -81,6 +82,17 @@ class Settings(BaseSettings):
             raise ValueError("Production Supabase S3 endpoint must end in /storage/v1/s3")
         if self.CRICKETCOACH_DEVICE.strip().lower() not in {"auto", "cpu"}:
             raise ValueError("Production CRICKETCOACH_DEVICE must be auto or cpu")
+
+    def validate_model_startup(self, model_available: bool) -> None:
+        """Keep production strict unless the non-ML preview was explicitly enabled."""
+        if (
+            self.is_production
+            and not model_available
+            and not self.ALLOW_MODEL_UNAVAILABLE_PREVIEW
+        ):
+            raise RuntimeError(
+                "The visual model could not be loaded; refusing an unhealthy production start"
+            )
 
     @property
     def max_video_size_bytes(self) -> int:

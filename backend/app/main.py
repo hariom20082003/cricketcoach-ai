@@ -75,8 +75,11 @@ def startup_event():
     finally:
         db.close()
     classifier = get_visual_classifier()
-    if settings.is_production and not classifier.is_available:
-        raise RuntimeError("The visual model could not be loaded; refusing an unhealthy production start")
+    settings.validate_model_startup(classifier.is_available)
+    if not classifier.is_available:
+        logger.warning(
+            "Visual shot classifier unavailable; video analysis starts will return HTTP 503"
+        )
     logger.info("CricketCoach AI API started successfully.")
 
 

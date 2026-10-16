@@ -31,6 +31,15 @@ def process_video_analysis(job_id: int):
             logger.error("Job %s not found", job_id)
             return
 
+        if not get_visual_classifier().is_available:
+            job.status = AnalysisStatus.failed
+            job.error_message = (
+                "Cricket-shot analysis is unavailable because the visual classifier is not loaded. "
+                "No analysis result was completed."
+            )
+            db.commit()
+            return
+
         _run_analysis(db, job)
     except Exception as e:
         logger.exception("Unexpected error in analysis worker for job %s: %s", job_id, e)
@@ -73,6 +82,12 @@ def _run_analysis(db: Session, job: AnalysisJob):
 
 
 def _run_analysis_for_local_video(db: Session, job: AnalysisJob, video, local_video_path: str):
+    classifier = get_visual_classifier()
+    if not classifier.is_available:
+        raise RuntimeError(
+            "Cricket-shot analysis is unavailable because the visual classifier is not loaded."
+        )
+
     # ── Step 1: Pose extraction ───────────────────────────────────────────────
     logger.info("Job %s: Starting pose extraction", job.id)
     _update_progress(db, job, 10)
@@ -114,15 +129,15 @@ def _run_analysis_for_local_video(db: Session, job: AnalysisJob, video, local_vi
     # This model consumes sampled RGB frames from the original video. Pose
     # landmarks remain a separate input to technique coaching below.
     logger.info("Job %s: Running visual-temporal shot classification", job.id)
-    classifier = get_visual_classifier()
-    prediction_data = classifier.predict_video(local_video_path) if classifier.is_available else {
-        "shot_label": None,
-        "confidence": None,
-        "all_scores": {},
-        "model_available": False,
-    }
-    if prediction_data.get("error"):
-        logger.warning("Job %s: Visual classification failed: %s", job.id, prediction_data["error"])
+    prediction_data = classifier.predict_video(local_video_path)
+    if (
+        not prediction_data.get("model_available")
+        or not prediction_data.get("shot_label")
+        or prediction_data.get("error")
+    ):
+        raise RuntimeError(
+            "Visual shot classification failed; the analysis was not completed."
+        )
 
     prediction_record = ShotPrediction(
         job_id=job.id,

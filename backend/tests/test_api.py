@@ -459,6 +459,47 @@ class TestModelStatus:
         assert "model_available" in data
         assert "message" in data
 
+    def test_analysis_start_returns_503_without_visual_model(self, client, auth_headers, monkeypatch):
+        class MissingClassifier:
+            is_available = False
+            model_meta = None
+            supported_shots = [
+                "cover", "defense", "flick", "hook", "late_cut",
+                "lofted", "pull", "square_cut", "straight", "sweep",
+            ]
+
+        monkeypatch.setattr(
+            "app.routers.analysis.get_visual_classifier", lambda: MissingClassifier()
+        )
+        monkeypatch.setattr(
+            "app.routers.misc.get_visual_classifier", lambda: MissingClassifier()
+        )
+        model_status = client.get("/api/model/status")
+        assert model_status.status_code == 200
+        assert model_status.json()["model_available"] is False
+        assert "returns HTTP 503" in model_status.json()["message"]
+
+        upload = client.post(
+            "/api/videos/upload",
+            headers=auth_headers,
+            files={"file": ("no-model.avi", create_test_video_bytes(), "video/x-msvideo")},
+            data={"batting_hand": "right", "recording_angle": "side-on"},
+        )
+        assert upload.status_code == 201
+        video_id = upload.json()["id"]
+
+        response = client.post(f"/api/analysis/start/{video_id}", headers=auth_headers)
+        assert response.status_code == 503
+        assert "visual classifier is not loaded" in response.json()["detail"]
+        assert "No analysis job was created" in response.json()["detail"]
+
+        from app.models import AnalysisJob
+        db = TestingSessionLocal()
+        try:
+            assert db.query(AnalysisJob).filter(AnalysisJob.video_id == video_id).count() == 0
+        finally:
+            db.close()
+
 
 class TestShotsGuide:
     def test_get_guide(self, client):

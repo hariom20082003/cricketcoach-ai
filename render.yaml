@@ -2,6 +2,7 @@ services:
   - type: web
     name: cricketcoach-api
     runtime: python
+    plan: free
     rootDir: backend
     buildCommand: python -m pip install --no-cache-dir -r requirements-render.txt
     # Apply committed Alembic migrations before serving requests. This is idempotent
@@ -41,6 +42,8 @@ services:
         value: /tmp/cricketcoach-model
       - key: CRICKETCOACH_DEVICE
         value: cpu
+      - key: ALLOW_MODEL_UNAVAILABLE_PREVIEW
+        value: "false"
       - key: ACCESS_TOKEN_EXPIRE_MINUTES
         value: "720"
       - key: MAX_VIDEO_SIZE_MB

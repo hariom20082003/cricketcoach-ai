@@ -222,8 +222,9 @@ def get_model_status(db: Session = Depends(get_db)):
             supported_shots=classifier.supported_shots,
             training_samples=None,
             message=(
-                "No compatible visual-temporal model is loaded. Pose analysis and technique coaching "
-                "remain separate; train with ml_pipeline/train_visual_model.py after preparing the dataset."
+                "The visual-temporal model is not loaded. New cricket-shot analysis is disabled and "
+                "returns HTTP 503 until the private model artifacts are configured. Existing history "
+                "and non-ML routes remain available."
             ),
         )
 
