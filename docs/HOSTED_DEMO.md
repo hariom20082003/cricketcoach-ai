@@ -1,6 +1,6 @@
-# Hosted college demonstration setup
+# Hosted CricketCoach AI setup
 
-This guide prepares the existing app for GitHub Pages, Render, and Supabase. It does not create accounts, provision services, publish the site, upload video/model files, or select a paid plan. Review provider pricing and limits before creating anything.
+This guide describes the existing GitHub Pages, Render, and Supabase setup and the optional Hugging Face ZeroGPU inference service. It does not create accounts, upload video/model files, or select a paid plan. Review provider pricing and limits before making changes.
 
 ## Application and data architecture
 
@@ -15,9 +15,9 @@ The Privacy Notice describes collected data, intended storage, and deletion. Use
 
 ## Repository and model artifacts
 
-The root `.gitignore` excludes environment files, local databases, uploads, all dataset media/archive/cache content, the full `dataset/prepared/` metadata directory, virtual environments, build/cache output, and PyTorch checkpoints. The model loader fetches `models/cricketshot_temporal.pt` and `models/visual_model_meta.json` from the configured private bucket prefix when local files are absent. It loads the weights with `map_location="cpu"` and strict state-dict matching. Production defaults to requiring the classifier. `ALLOW_MODEL_UNAVAILABLE_PREVIEW=true` is an explicit non-ML preview override: authentication and other non-ML routes can start, `/api/model/status` reports the model unavailable, and `POST /api/analysis/start/{video_id}` returns HTTP 503 before creating a job. The worker also fails closed if the classifier becomes unavailable or produces no class label; it cannot complete a pose-only job as a shot classification. Keep the override false for normal production.
+The root `.gitignore` excludes environment files, local databases, uploads, all dataset media/archive/cache content, the full `dataset/prepared/` metadata directory, virtual environments, build/cache output, and PyTorch checkpoints. The model loader fetches `models/cricketshot_temporal.pt` and `models/visual_model_meta.json` from the configured private bucket prefix when local files are absent. It loads the weights with `map_location="cpu"` and strict state-dict matching. Production defaults to requiring the classifier. `ALLOW_MODEL_UNAVAILABLE_PREVIEW=true` is an explicit non-ML preview override: authentication and other non-ML routes can start, `/api/model/status` reports the model unavailable, and `POST /api/analysis/start/{video_id}` returns HTTP 503 before creating a job. The optional Hugging Face integration instead selects a remote classifier when `HF_ZERO_GPU_SPACE_ID` is configured; Render does not load the weights in that mode. The model status endpoint reports that the Space is configured, not that its queue, quota, storage access, or model has been live-probed. Keep the preview override false only after model artifacts and inference capacity are configured.
 
-The model and original footage have **not** been uploaded. The licensing question remains unresolved: the [Hugging Face dataset card](https://huggingface.co/datasets/rokmr/cricket-shot/tree/main) lists Apache-2.0, while the upstream [CricShot10 README](https://github.com/ascuet/CricShot10/blob/main/README.md) limits use of the source footage to research purposes and notes the original rights holders. Obtain permission for the derived weights before uploading them to private storage or enabling a hosted model deployment. Do not upload the footage or the 2.89 GB archive. The local model is version `1.0.0`, architecture `efficientnet_b0_frozen_gru` v1. After rights approval, verify the local SHA-256 values before uploading exactly these private bucket object keys: `models/cricketshot_temporal.pt` and `models/visual_model_meta.json`. The checkpoint SHA-256 is `da8466e42ad09e036ab739592135c88062e284b8c958c53bf746e9e19eed4d20`; the metadata SHA-256 is `bd6cd349b60042c4938e73cb306bd94f4334c03de5eb4b674bdc328107a8a369`.
+The model artifacts still need to be uploaded to private storage. The user reports written rights clearance, but the repository does not contain or independently verify that permission; ensure it covers both source-footage use and derived-weight hosting. The [Hugging Face dataset card](https://huggingface.co/datasets/rokmr/cricket-shot/tree/main) lists Apache-2.0, while the upstream [CricShot10 README](https://github.com/ascuet/CricShot10/blob/main/README.md) limits use of the source footage to research purposes and notes the original rights holders. Do not upload the footage or the 2.89 GB archive. The local model is version `1.0.0`, architecture `efficientnet_b0_frozen_gru` v1. After confirming that the clearance permits hosting, verify the local SHA-256 values and upload exactly these private bucket object keys: `models/cricketshot_temporal.pt` and `models/visual_model_meta.json`. The checkpoint SHA-256 is `da8466e42ad09e036ab739592135c88062e284b8c958c53bf746e9e19eed4d20`; the metadata SHA-256 is `bd6cd349b60042c4938e73cb306bd94f4334c03de5eb4b674bdc328107a8a369`.
 
 ## 1. Create the Supabase project and private bucket
 
@@ -69,17 +69,30 @@ Set these backend environment variables in Render. `render.yaml` generates `SECR
 
 `DATABASE_URL` passwords containing reserved URI characters must be percent-encoded. Production refuses SQLite, local upload storage, insecure PostgreSQL SSL modes, a non-HTTPS S3 endpoint, wildcard/non-HTTPS CORS, missing object-storage settings, or unsupported device values. SQLAlchemy uses a small application pool with `pool_pre_ping`; psycopg automatic prepared statements are disabled for transaction-pooler compatibility. Use the same database URI for the Render migration and application process.
 
-After deployment, verify `https://<render-service>/api/health` returns HTTP 200 and reports database and model status accurately. With preview mode enabled, `model_available` is false and analysis-start requests return 503. Normal production requires the model. A local CPU measurement that imports the API, loads the model, and runs a synthetic forward pass peaked at about 577 MiB RSS; it exceeded Render Free's 512 MB RAM limit before real video decoding. The Free plan is therefore not a realistic target for hosted model inference. Render's `1c-2g` plan (1 CPU, 2 GB RAM) is a candidate if hosted inference is approved; no hosted compatibility claim is made until tested there. Do not choose a paid plan without approval.
+After deployment, verify `https://<render-service>/api/health` returns HTTP 200 and reports database and model status accurately. With preview mode enabled and remote inference unset, `model_available` is false and analysis-start requests return 503. A local CPU measurement that imports the API, loads the model, and runs a synthetic forward pass peaked at about 577 MiB RSS; it exceeded Render Free's 512 MB RAM limit before real video decoding. The optional Hugging Face ZeroGPU integration keeps model weights off Render, but free inference is queue-based and quota-limited (currently 5 GPU minutes/day for eligible free accounts). It is not a guaranteed production service. Do not choose a paid plan without approval.
 
-## 3. Configure GitHub Pages
+## 3. Configure the optional Hugging Face ZeroGPU inference service
 
-1. Use the existing repository `hariom20082003/cricketcoach-ai`; this task does not push changes.
+This path is optional and does not upload the model weights to GitHub or Hugging Face. It keeps the model in the existing private Supabase bucket, and the private Gradio Space downloads it when its GPU prediction function first runs. Hugging Face ZeroGPU is shared, queue-based, and subject to account eligibility, cold starts, outages, and daily quota. A free account currently receives 5 GPU minutes per day; confirm current terms in Hugging Face before relying on it.
+
+1. Create a **private Gradio Space** in your Hugging Face account and select **ZeroGPU** hardware. The account must be eligible for ZeroGPU. Do not make the Space public: private video uploads pass through it during analysis.
+2. In that Space's **Settings → Variables and secrets**, add `VIDEO_STORAGE_BACKEND=s3`, `SUPABASE_S3_ENDPOINT`, `SUPABASE_S3_REGION`, `SUPABASE_S3_BUCKET`, `SUPABASE_S3_ACCESS_KEY_ID`, `SUPABASE_S3_SECRET_ACCESS_KEY`, `MODEL_ARTIFACT_PREFIX=models`, `VISUAL_MODEL_DIR=/tmp/cricketcoach-model`, and `CRICKETCOACH_DEVICE=cuda`. Reuse the existing private-bucket connection values, but create a separate S3 credential if the provider supports a restricted key. Never put these values in GitHub or chat.
+3. After confirming the rights clearance, upload only `cricketshot_temporal.pt` and `visual_model_meta.json` to the private bucket at `models/cricketshot_temporal.pt` and `models/visual_model_meta.json`. Verify both checksums shown above. Do not upload source videos or weights to the Space repository.
+4. In Hugging Face **Settings → Access Tokens**, create a read-only token that can read this private Space. Add `HF_ZERO_GPU_SPACE_ID` to Render as `owner/space-name` and `HF_TOKEN` as that read token. Do not share either token in chat. These settings are opt-in; leaving the Space ID empty preserves the existing limited-preview behavior.
+5. In GitHub **Settings → Secrets and variables → Actions**, add the repository variable `HF_SPACE_ID` (`owner/space-name`) and secret `HF_SPACE_DEPLOY_TOKEN` (a separate Hugging Face token with write access to the Space). Then run **Actions → Deploy CricketCoach model to Hugging Face ZeroGPU → Run workflow**. The workflow uploads only Space code and metadata, never the model checkpoint.
+6. Wait for the Space to build and become healthy, then redeploy the Render service after setting its two Hugging Face variables. Check `/api/model/status`, then upload a non-sensitive test clip while observing both providers' logs. The first request may be slow or fail if the Space has not loaded the private weights, is queued, or has exhausted its quota.
+
+When enabled, the Render API sends each analyzed video to the private Space for inference. This transfer is disclosed in the frontend Privacy Notice. Hugging Face provider-side processing/log retention may apply; do not send sensitive footage.
+
+## 4. Configure GitHub Pages
+
+1. Use the existing repository `hariom20082003/cricketcoach-ai`.
 2. In **Settings → Pages**, set the source to **GitHub Actions**.
 3. In **Settings → Secrets and variables → Actions → Variables**, add `VITE_API_URL` with the Render HTTPS origin, e.g. `https://cricketcoach-api.onrender.com`, without `/api` or a trailing slash. This is a public API address, not a secret.
 4. The existing `.github/workflows/deploy-pages.yml` derives the repository base path and runs the Vite production build. Push to `main` or manually run **Actions → Build and deploy CricketCoach AI frontend → Run workflow** after the repository is ready.
 5. Copy the final Pages site origin into Render's `CORS_ORIGINS` and redeploy the backend. Do not include `/REPOSITORY/` in the CORS origin.
 
-## 4. Apply and check migrations
+## 5. Apply and check migrations
 
 From the repository root, initialize a fresh local development database with the committed migration:
 
@@ -100,7 +113,7 @@ alembic check
 
 The initial migration creates all tables from an empty database. Local SQLite data is not copied. Keep future schema changes in new Alembic revisions and deploy migrations before serving code that depends on them. Do not use `create_all()` to initialize a hosted schema.
 
-## 5. End-to-end deployment checks
+## 6. End-to-end deployment checks
 
 After configuring services and permitting the model artifact, test manually:
 
@@ -110,7 +123,7 @@ After configuring services and permitting the model artifact, test manually:
 4. Restart/redeploy Render. Confirm login and completed history remain, and the private video streams through the API. An in-progress job may be marked failed after restart.
 5. Check browser CORS/network errors and Render logs. Local checks do not count as hosted verification.
 
-The existing Supabase database and private bucket were configured separately and the live Alembic revision is `f6a1c3d9e742`. GitHub Pages is enabled, but its deployment requires the `VITE_API_URL` Actions variable. A Render service still needs to be created and configured; no Render-to-Supabase connection or hosted inference has been verified.
+The last recorded deployment check found the GitHub Pages site and Render API live, with the database healthy and the model unavailable. The optional Hugging Face Space, model artifacts in Supabase Storage, remote tokens, and an end-to-end inference request have not been configured or verified.
 
 ## Local checks
 

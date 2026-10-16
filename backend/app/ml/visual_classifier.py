@@ -283,10 +283,17 @@ class VisualShotClassifier:
 
 
 _visual_classifier: Optional[VisualShotClassifier] = None
+_remote_visual_classifier = None
 
 
-def get_visual_classifier() -> VisualShotClassifier:
-    global _visual_classifier
+def get_visual_classifier():
+    global _visual_classifier, _remote_visual_classifier
+    if settings.HF_ZERO_GPU_SPACE_ID.strip():
+        if _remote_visual_classifier is None:
+            from app.ml.remote_visual_classifier import HuggingFaceZeroGPUClassifier
+
+            _remote_visual_classifier = HuggingFaceZeroGPUClassifier()
+        return _remote_visual_classifier
     if _visual_classifier is None:
         _visual_classifier = VisualShotClassifier()
     return _visual_classifier

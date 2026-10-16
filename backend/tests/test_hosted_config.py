@@ -26,6 +26,16 @@ def test_valid_hosted_configuration_is_accepted():
     hosted_settings().validate_production()
 
 
+def test_remote_space_requires_a_token():
+    with pytest.raises(ValueError, match="HF_TOKEN"):
+        hosted_settings(HF_ZERO_GPU_SPACE_ID="demo/private-space").validate_production()
+
+    hosted_settings(
+        HF_ZERO_GPU_SPACE_ID="demo/private-space",
+        HF_TOKEN="private-read-token",
+    ).validate_production()
+
+
 def test_missing_model_is_strict_in_production_unless_preview_is_enabled():
     strict = hosted_settings()
     assert strict.ALLOW_MODEL_UNAVAILABLE_PREVIEW is False

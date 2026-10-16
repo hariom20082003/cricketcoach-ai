@@ -23,6 +23,8 @@ class Settings(BaseSettings):
     SUPABASE_S3_SECRET_ACCESS_KEY: str = ""
     MODEL_ARTIFACT_PREFIX: str = "models"
     VISUAL_MODEL_DIR: Optional[str] = None
+    HF_ZERO_GPU_SPACE_ID: str = ""
+    HF_TOKEN: str = ""
     CRICKETCOACH_DEVICE: str = "auto"
     ALLOW_MODEL_UNAVAILABLE_PREVIEW: bool = False
     MAX_VIDEO_SIZE_MB: int = 100
@@ -82,6 +84,8 @@ class Settings(BaseSettings):
             raise ValueError("Production Supabase S3 endpoint must end in /storage/v1/s3")
         if self.CRICKETCOACH_DEVICE.strip().lower() not in {"auto", "cpu"}:
             raise ValueError("Production CRICKETCOACH_DEVICE must be auto or cpu")
+        if self.HF_ZERO_GPU_SPACE_ID.strip() and not self.HF_TOKEN.strip():
+            raise ValueError("HF_TOKEN is required when HF_ZERO_GPU_SPACE_ID is configured")
 
     def validate_model_startup(self, model_available: bool) -> None:
         """Keep production strict unless the non-ML preview was explicitly enabled."""

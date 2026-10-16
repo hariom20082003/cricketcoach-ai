@@ -194,6 +194,15 @@ def get_model_status(db: Session = Depends(get_db)):
     meta = classifier.model_meta
 
     if classifier.is_available:
+        if classifier.device_name == "Hugging Face ZeroGPU":
+            model_message = (
+                "Hugging Face ZeroGPU inference is configured. Requests can queue, and the free "
+                "account has a limited daily GPU quota."
+            )
+        else:
+            model_message = (
+                f"Visual-temporal model is loaded on {classifier.device_name} and ready for video inference."
+            )
         return ModelStatusOut(
             model_available=True,
             model_name=meta.get("name", "Shot Classifier") if meta else "Shot Classifier",
@@ -206,7 +215,7 @@ def get_model_status(db: Session = Depends(get_db)):
             dataset=meta.get("dataset", {}).get("id") if meta else None,
             supported_shots=classifier.supported_shots,
             training_samples=meta.get("training_samples") if meta else None,
-            message=f"Visual-temporal model is loaded on {classifier.device_name} and ready for video inference.",
+            message=model_message,
         )
     else:
         return ModelStatusOut(

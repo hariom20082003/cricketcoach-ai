@@ -3,3 +3,4 @@
 --index-url https://download.pytorch.org/whl/cpu
 --extra-index-url https://pypi.org/simple
 -r requirements.txt
+gradio_client==1.10.2
